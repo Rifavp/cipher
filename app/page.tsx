@@ -22,9 +22,25 @@ export default async function Home() {
     .single()
 
   if (!profile) {
-    // Handle edge case where auth exists but profile doesn't (shouldn't happen with trigger)
-    // Maybe redirect to setup or just wait?
-    // For now, assume it exists.
+    // Fallback: This usually happens if the database trigger failed or didn't run.
+    // We can try to recover or just ask them to re-login to trigger creation logic if we had it there.
+    // For now, simple error.
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#1a1a1a] text-white">
+        <div className="text-center">
+          <h1 className="text-xl font-bold mb-2">Profile Not Found</h1>
+          <p className="text-gray-400 mb-4">Your account exists but your profile data is missing.</p>
+          <form action={async () => {
+            'use server'
+            const sb = await createClient()
+            await sb.auth.signOut()
+            redirect('/login')
+          }}>
+            <button className="bg-blue-600 px-4 py-2 rounded-lg">Log Out</button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   // 3. Fetch Chats
@@ -71,7 +87,8 @@ export default async function Home() {
     participants: c.chat_participants.map((p: any) => ({
       user_id: p.user_id,
       unique_code: p.profiles?.unique_code || 'UNK',
-      display_name: p.profiles?.display_name || 'Unknown'
+      display_name: p.profiles?.display_name || 'Unknown',
+      custom_chat_name: p.custom_chat_name
     }))
   }))
 

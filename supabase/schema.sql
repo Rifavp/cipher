@@ -34,7 +34,7 @@ create table public.chat_participants (
 create table public.messages (
   id uuid default uuid_generate_v4() primary key,
   chat_id uuid references public.chats(id) on delete cascade not null,
-  sender_id references public.profiles(id) on delete cascade not null,
+  sender_id uuid references public.profiles(id) on delete cascade not null,
   content text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

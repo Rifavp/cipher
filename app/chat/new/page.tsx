@@ -1,16 +1,21 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { AlertCircle, ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NewChatPage({ searchParams }: { searchParams: { code: string } }) {
+export default async function NewChatPage(props: {
+    searchParams: Promise<{ code?: string }>
+}) {
+    const searchParams = await props.searchParams
+    const targetCode = searchParams.code
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) redirect('/login')
-
-    const targetCode = searchParams.code
 
     if (!targetCode) redirect('/')
 
@@ -21,60 +26,51 @@ export default async function NewChatPage({ searchParams }: { searchParams: { co
         .eq('unique_code', targetCode)
         .single()
 
+    // ERROR HANDLING: User Not Found
     if (!targetUser) {
-        // Handle "User not found" - For now just redirect home (ideally show error)
-        redirect('/')
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a] text-white p-4">
+                <div className="bg-[#2a2a2a] p-8 rounded-2xl max-w-sm w-full text-center border border-[#333]">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h1 className="text-xl font-bold mb-2">User Not Found</h1>
+                    <p className="text-gray-400 mb-6">
+                        No user found with the code <span className="text-white font-mono font-bold">{targetCode}</span>.
+                    </p>
+                    <Link href="/" className="inline-flex items-center gap-2 bg-[#333] hover:bg-[#444] text-white px-6 py-3 rounded-xl transition-colors">
+                        <ArrowLeft className="w-4 h-4" /> Go Back
+                    </Link>
+                </div>
+            </div>
+        )
     }
 
+    // ERROR HANDLING: Self Chat
     if (targetUser.id === user.id) {
-        redirect('/') // Cannot chat with self
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a] text-white p-4">
+                <div className="bg-[#2a2a2a] p-8 rounded-2xl max-w-sm w-full text-center border border-[#333]">
+                    <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                    <h1 className="text-xl font-bold mb-2">Whoops!</h1>
+                    <p className="text-gray-400 mb-6">
+                        You cannot start a chat with yourself.
+                    </p>
+                    <Link href="/" className="inline-flex items-center gap-2 bg-[#333] hover:bg-[#444] text-white px-6 py-3 rounded-xl transition-colors">
+                        <ArrowLeft className="w-4 h-4" /> Go Back
+                    </Link>
+                </div>
+            </div>
+        )
     }
 
-    // 2. Check if Chat Exists
-    // logic: find chat where participants include both user.id and targetUser.id
-    // This is hard in basic Supabase query.
-    // We'll simplisticly fetch ALL my chats and filter in code (inefficient for millions, fine for MVP)
-    // OR use a stored procedure.
-    // Let's use the efficient approach:
+    // 2. Get or Create Chat via RPC
+    const { data: chatId, error: rpcError } = await supabase.rpc('get_or_create_direct_chat', {
+        other_user_id: targetUser.id
+    })
 
-    // Get all chat_ids I am in
-    const { data: myChats } = await supabase
-        .from('chat_participants')
-        .select('chat_id')
-        .eq('user_id', user.id)
-
-    const myChatIds = myChats?.map(c => c.chat_id) || []
-
-    // Check if target is in any of these chats
-    if (myChatIds.length > 0) {
-        const { data: existingChat } = await supabase
-            .from('chat_participants')
-            .select('chat_id')
-            .in('chat_id', myChatIds)
-            .eq('user_id', targetUser.id)
-            .single() // Should be only one 1-on-1 chat if we enforce logic, but here just find *any*
-
-        if (existingChat) {
-            redirect(`/chat/${existingChat.chat_id}`)
-        }
+    if (rpcError) {
+        console.error("Error creating chat:", rpcError)
+        return <div>Error creating chat. Please try again.</div>
     }
 
-    // 3. Create New Chat
-    const { data: newChat, error: chatError } = await supabase
-        .from('chats')
-        .insert({})
-        .select()
-        .single()
-
-    if (chatError || !newChat) redirect('/')
-
-    // 4. Add Participants
-    await supabase
-        .from('chat_participants')
-        .insert([
-            { chat_id: newChat.id, user_id: user.id },
-            { chat_id: newChat.id, user_id: targetUser.id }
-        ])
-
-    redirect(`/chat/${newChat.id}`)
+    redirect(`/chat/${chatId}`)
 }
