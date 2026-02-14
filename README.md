@@ -1,5 +1,7 @@
 # Cipher - Secure Real-time Chat
 
+[**Live Demo**](https://cipher-next-6d01owncc-rifa-vps-projects.vercel.app/)
+
 Cipher is a secure, real-time messaging application built with Next.js and Supabase. It prioritizes user privacy by using Unique Codes for connection instead of phone numbers or email sharing.
 
 ## 🚀 Features
@@ -60,7 +62,13 @@ graph TD
 
 ## 📸 Screenshots
 
-*(Add your screenshots here)*
+![alt text](<Screenshot 2026-02-14 090217.png>)
+![alt text](<Screenshot 2026-02-14 090159.png>)
+![alt text](<Screenshot 2026-02-14 090144-1.png>)
+![alt text](<Screenshot 2026-02-14 090122.png>)
+![alt text](<Screenshot 2026-02-14 090055.png>)
+
+
 
 ## 📄 License
 
@@ -68,4 +76,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Team
 
-*   [Your Name] - Lead Developer
+*    Rifa vp - Lead Developer
+*    Dilna p - Co Developer
